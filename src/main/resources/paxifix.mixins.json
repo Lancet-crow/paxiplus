@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "lancet_.paxifix.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"refmap": "paxifix.refmap.json",
+	"mixins": [
+      "PaxiMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
