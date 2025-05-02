@@ -3,9 +3,9 @@
 	"id": "paxifix",
 	"version": "${version}",
 	"name": "PaxiFix",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "An addon for Paxi, porting 1.21 feature for loading packs from any folder in-game!",
 	"authors": [
-		"Lancet_"
+	  "Lancet_"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
