@@ -5,7 +5,7 @@
 	"name": "PaxiFix",
 	"description": "This is an example description! Tell everyone what your mod is about!",
 	"authors": [
-		"Me!"
+		"Lancet_"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
@@ -28,6 +28,7 @@
 		"java": ">=17",
 		"fabric-api": "*",
 		"yungsapi": ">=1.20-Fabric-4.0.1",
-		"paxi": ">=1.20-Fabric-4.0"
+		"paxi": ">=1.20-Fabric-4.0",
+		"cloth-config": ">=11.1.136+fabric"
 	}
 }

@@ -1,41 +1,28 @@
 package lancet_.paxifix.mixin;
 
-import com.google.common.io.Files;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
-import com.yungnickyoung.minecraft.paxi.PaxiCommon;
 import com.yungnickyoung.minecraft.paxi.PaxiRepositorySource;
 import com.yungnickyoung.minecraft.paxi.mixin.accessor.FolderRepositorySourceAccessor;
 import lancet_.paxifix.PaxiFix;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.packs.repository.FolderRepositorySource;
-import net.minecraft.server.packs.repository.Pack;
-import net.minecraft.server.packs.repository.PackSource;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.function.UnaryOperator;
 
 @Mixin(value = PaxiRepositorySource.class, remap = false)
-public class PaxiMixin {
+public abstract class PaxiMixin {
 
     @Shadow private File ordering;
 
-    @Shadow @Final private static FileFilter PACK_FILTER;
+    @Shadow public List<String> orderedPaxiPacks;
+
+    @Shadow public List<String> unorderedPaxiPacks;
 
     @Inject(method = "loadPacksFromFiles()[Ljava/nio/file/Path;",
             at = @At(value = "INVOKE",
@@ -58,143 +45,50 @@ public class PaxiMixin {
             at = @At("HEAD"),
             cancellable = true, remap = false)
     public void paxiFix$notLoadPacksFromFilesIfLoadOrderIsEmpty(CallbackInfoReturnable<Path[]> cir){
+        this.orderedPaxiPacks.clear();
+        this.unorderedPaxiPacks.clear();
         if (this.ordering == null){
             cir.setReturnValue(new Path[0]);
             cir.cancel();
         }
     }
 
-    @Inject(method = "loadPacksFromFiles()[Ljava/nio/file/Path;",
+    @Inject(method = "loadPacksFromFiles",
             at = @At(value = "INVOKE",
-                    target = "Ljava/util/List;forEach(Ljava/util/function/Consumer;)V",
-                    shift = At.Shift.AFTER),
-            remap = false
-    )
-    public void paxiFix$stopLoadingUnorderedPacks(CallbackInfoReturnable<Path[]> cir, @Local(ordinal = 1) LocalRef<List<File>> unorderedPacks){
-        unorderedPacks.set(new ArrayList<>());
+                    target = "Ljava/util/stream/Stream;flatMap(Ljava/util/function/Function;)Ljava/util/stream/Stream;",
+            shift = At.Shift.AFTER))
+    private void paxiFix$loadPacksFromFiles(CallbackInfoReturnable<Path[]> cir, @Local(ordinal = 1) LocalRef<List<File>> unorderedPacks) {
+        List<File> emptyUnorderedPacks = unorderedPacks.get();
+        emptyUnorderedPacks.clear();
+        unorderedPacks.set(emptyUnorderedPacks);
     }
 
-    @Inject(method = "loadPacks(Ljava/util/function/Consumer;)V",
-            at = @At(value = "INVOKE", target = "Ljava/nio/file/Path;getFileName()Ljava/nio/file/Path;"),
-    slice = @Slice(
-            from = @At(value = "INVOKE",
-                    target = "Lcom/yungnickyoung/minecraft/paxi/PaxiRepositorySource;loadPacksFromFiles()[Ljava/nio/file/Path;"),
-            to = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/server/packs/repository/Pack;readMetaAndCreate(Ljava/lang/String;Lnet/minecraft/network/chat/Component;ZLnet/minecraft/server/packs/repository/Pack$ResourcesSupplier;Lnet/minecraft/server/packs/PackType;Lnet/minecraft/server/packs/repository/Pack$Position;Lnet/minecraft/server/packs/repository/PackSource;)Lnet/minecraft/server/packs/repository/Pack;")
-    ),
-            remap = false)
-    public void paxiFix$changePackDirectoryIfNotAlready(Consumer<Pack> packAdder, CallbackInfo ci, @Local LocalRef<Path> packPath){
-        if (!packPath.get().getParent().getParent().equals(PaxiCommon.BASE_PACK_DIRECTORY.toPath())){
-            PaxiFix.LOGGER.warn("Changing pack {} directory...", packPath.get().getFileName());
-            Path destinationDirectory = Paths.get(PaxiCommon.BASE_PACK_DIRECTORY.toString(), packPath.get().getParent().getFileName().toString());
-            try {
-                packPath.set(moveToPath(packPath.get(), destinationDirectory));
-            } catch (IOException ex) {
-                PaxiFix.LOGGER.error(Arrays.toString(ex.getStackTrace()));
-            }
-        }
-    }
+    @Inject(method = "filesFromNames", at = @At("HEAD"), cancellable = true)
+    private void paxiFix$filesFromNames(String[] packFileNames, FileFilter filter, CallbackInfoReturnable<List<File>> cir) {
+        ArrayList<File> packFiles = new ArrayList<>();
 
-    @Inject(method = "loadPacks(Ljava/util/function/Consumer;)V",
-            at = @At("TAIL"),
-            remap = false)
-    public void paxiFix$returnUnorderedFilesFromPaxi(Consumer<Pack> packAdder, CallbackInfo ci, @Local(ordinal = 0) Path[] packs){
-        Path paxiPackFolder = Paths.get(PaxiCommon.BASE_PACK_DIRECTORY.toString(), ((FolderRepositorySourceAccessor)this).getFolder().getFileName().toString());
-        File[] allPacks = paxiPackFolder.toFile().listFiles(PACK_FILTER);
-        if (allPacks != null){
-            Path[] allPackPaths = Arrays.stream(allPacks).map(File::toPath).toArray(Path[]::new);
-            Path[] unorderedPackPaths = Arrays.stream(allPackPaths).filter(
-                    (file) -> !Arrays.stream(packs).toList().contains(file))
-                    .toArray(Path[]::new);
-            if (unorderedPackPaths.length > 0){
-                Path destinationDirectory = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ((FolderRepositorySourceAccessor)this).getFolder().getFileName().toString());
-                PaxiFix.LOGGER.info("Found {} unordered packs", unorderedPackPaths.length);
-                PaxiFix.LOGGER.info("Destination directory for unordered packs is: {}", destinationDirectory);
-                for(Path packPath : unorderedPackPaths) {
-                    try {
-                        packPath = moveToPath(packPath, destinationDirectory);
-                    } catch (IOException ex) {
-                        PaxiFix.LOGGER.error(ex.getMessage());
-                    }
-                    String packName = packPath.getFileName().toString();
-                    Pack resourcePackProfile = Pack.readMetaAndCreate(packName, Component.literal(packName), false, Objects.requireNonNull(FolderRepositorySource.detectPackResources(packPath, false)), ((FolderRepositorySourceAccessor)this).getPackType(), Pack.Position.TOP, PackSource.create(returnSource(), true));
-                    if (resourcePackProfile != null) {
-                        packAdder.accept(resourcePackProfile);
-                    }
-                }
-            }
-        }
-    }
+        for (String fileName : packFileNames) {
+            // First, check for the pack as-is, using the base Minecraft folder as the base directory
+            File packFile = new File(PaxiFix.BASE_GAME_DIRECTORY, fileName);
 
-    @Inject(method = "filesFromNames([Ljava/lang/String;Ljava/io/FileFilter;)Ljava/util/List;",
-            at = @At(value = "INVOKE", target = "Ljava/io/File;exists()Z"), remap = false)
-    public void paxiFix$checkPaxiDirectory(String[] packFileNames, FileFilter filter, CallbackInfoReturnable<List<File>> cir, @Local File packFile, @Local ArrayList<File> packFiles){
-        Path paxiFile = getPaxifiedFile(packFile);
-        PaxiFix.LOGGER.info(String.valueOf(packFile.toPath()));
-        if (!paxiFile.toFile().exists() && packFile.equals(paxiFile.toFile())){
-            Path fromDirectory = Paths.get(FabricLoader.getInstance().getGameDir().toString(), packFile.getParentFile().toPath().getFileName().toString(), packFile.toPath().getFileName().toString());
-            Path destinationDirectory = Paths.get(PaxiCommon.BASE_PACK_DIRECTORY.toString(), packFile.getParentFile().toPath().getFileName().toString());
-            try {
-                packFile = moveToPath(fromDirectory, destinationDirectory).toFile();
+            if (!packFile.exists()) {
+                // If the pack doesn't exist, check for it in the Paxi datapacks/resourcepacks directory.
+                // This is the base Paxi behavior.
+                packFile = new File(((FolderRepositorySourceAccessor) this).getFolder().toFile().toString(), fileName);
             }
-            catch (Exception e){
-                PaxiFix.LOGGER.error(e.getMessage());
-            }
-        }
 
-        if (paxiFile.equals(packFile.toPath()) && packFile.exists()){
-            if (filter == null || filter.accept(packFile)) {
+            if (!packFile.exists()) {
+                // If the pack file still doesn't exist, log an error and skip it
+                PaxiFix.LOGGER.error("Unable to find pack with name {} specified in load ordering JSON file {}! Skipping...", fileName, this.ordering.getName());
+            } else if (filter != null && !filter.accept(packFile)) {
+                // If the pack file doesn't pass the filter, log an error and skip it
+                PaxiFix.LOGGER.error("Attempted to load pack {} but it is not a valid pack format! It may be missing a pack.mcmeta file. Skipping...", fileName);
+            } else {
+                // If the pack file exists and passes the filter, add it to the list
                 packFiles.add(packFile);
             }
-            else{
-                PaxiFix.LOGGER.warn("{} adding gone wrong, check its formatting(PACKFILE).", packFile);
-            }
         }
-        else if (paxiFile.equals(packFile.toPath())){
-            if (filter == null || filter.accept(paxiFile.toFile())) {
-                packFiles.add(paxiFile.toFile());
-            }
-            else{
-                PaxiFix.LOGGER.warn("{} adding gone wrong, check its formatting(PAXIFILE).", paxiFile);
-            }
-        }
-        else {
-            PaxiFix.LOGGER.error("{}, WHAT HAPPENED TO YOU?!", paxiFile);
-        }
-    }
-
-    @Redirect(method = "filesFromNames([Ljava/lang/String;Ljava/io/FileFilter;)Ljava/util/List;",
-    at = @At(value = "INVOKE",
-            target = "Lorg/apache/logging/log4j/Logger;error(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;)V"),
-            remap = false
-    )
-    public void stopErrorIfNotNeeded(Logger instance, String s, Object o1, Object o2, @Local File packFile){
-        if (!getPaxifiedFile(packFile).toFile().exists()){
-            PaxiCommon.LOGGER.error("Unable to find pack with name {} specified in load ordering JSON file {}! Skipping...", packFile.getPath(), o2);
-        }
-    }
-
-    @Unique
-    public Path getPaxifiedFile(File packFile){
-        Path destinationDirectory = Paths.get(PaxiCommon.BASE_PACK_DIRECTORY.toString(), packFile.getParentFile().toPath().getFileName().toString());
-        return destinationDirectory.resolve(packFile.getName());
-    }
-
-    @Unique
-    public Path moveToPath(Path packPath, Path destinationDirectory) throws IOException {
-        Path dpath = destinationDirectory.resolve(packPath.getFileName());
-        if (dpath.toFile().exists()) {
-            boolean deletedFile = dpath.toFile().delete();
-            if (deletedFile){
-                PaxiFix.LOGGER.warn("RP already exists in this folder, replacing with new one");
-            }
-        }
-        Files.move(packPath.toFile(), dpath.toFile());
-        return dpath;
-    }
-
-    @Unique
-    private static UnaryOperator<Component> returnSource() {
-        return (component) -> Component.translatable("pack.nameAndSource");
+        cir.setReturnValue(packFiles);
+        cir.cancel();
     }
 }
