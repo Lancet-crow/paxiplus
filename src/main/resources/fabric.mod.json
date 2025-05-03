@@ -5,7 +5,8 @@
 	"name": "PaxiFix",
 	"description": "An addon for Paxi, porting 1.21 feature for loading packs from any folder in-game!",
 	"authors": [
-	  "Lancet_"
+		"Lancet_",
+		"Fyoncle"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
@@ -28,7 +29,6 @@
 		"java": ">=17",
 		"fabric-api": "*",
 		"yungsapi": ">=1.20-Fabric-4.0.1",
-		"paxi": ">=1.20-Fabric-4.0",
-		"cloth-config": ">=11.1.136+fabric"
+		"paxi": ">=1.20-Fabric-4.0"
 	}
 }

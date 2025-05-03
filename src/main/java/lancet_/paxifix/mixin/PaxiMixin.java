@@ -24,6 +24,20 @@ public abstract class PaxiMixin {
 
     @Shadow public List<String> unorderedPaxiPacks;
 
+    /*@Inject(method = "loadPacks", at = @At("TAIL"))
+    public void paxiFix$saveOrderedPaxiPacks(Consumer<Pack> packAdder, CallbackInfo ci){
+        if (PaxiFix.PAST_PAXI_PACKS == null || !PaxiFix.PAST_PAXI_PACKS.exists()){
+            PaxiFix.PAST_PAXI_PACKS = new File(Paths.get(PaxiCommon.BASE_PACK_DIRECTORY.toString(), "past_paxi_packs.json").toUri());
+        }
+        PaxiFixOrdering paxiFixOrdering = new PaxiFixOrdering(this.orderedPaxiPacks.toArray(new String[0]));
+        try {
+            JSON.createJsonFileFromObject(PaxiFix.PAST_PAXI_PACKS.toPath(), paxiFixOrdering);
+        }
+        catch (IOException ex){
+            PaxiFix.LOGGER.error("Error when trying to save past paxi packs: {}", ex.getMessage());
+        }
+    }*/
+
     @Inject(method = "loadPacksFromFiles()[Ljava/nio/file/Path;",
             at = @At(value = "INVOKE",
                     target = "Ljava/io/File;listFiles(Ljava/io/FileFilter;)[Ljava/io/File;",
@@ -66,7 +80,6 @@ public abstract class PaxiMixin {
     @Inject(method = "filesFromNames", at = @At("HEAD"), cancellable = true)
     private void paxiFix$filesFromNames(String[] packFileNames, FileFilter filter, CallbackInfoReturnable<List<File>> cir) {
         ArrayList<File> packFiles = new ArrayList<>();
-
         for (String fileName : packFileNames) {
             // First, check for the pack as-is, using the base Minecraft folder as the base directory
             File packFile = new File(PaxiFix.BASE_GAME_DIRECTORY, fileName);

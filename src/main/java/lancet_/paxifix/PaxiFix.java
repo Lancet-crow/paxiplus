@@ -16,5 +16,6 @@ public class PaxiFix implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		BASE_GAME_DIRECTORY = FabricLoader.getInstance().getGameDir().toFile();
+		LOGGER.info("Loading patches to Paxi...");
 	}
 }

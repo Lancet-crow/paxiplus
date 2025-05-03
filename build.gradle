@@ -36,6 +36,8 @@ repositories {
 		name = 'Sponge / Mixin'
 		url = 'https://repo.spongepowered.org/repository/maven-public/'
 	}
+	//maven { url = "https://maven.bawnorton.com/releases" }
+	//maven { url = "https://maven.enjarai.dev/mirrors" }
 }
 
 dependencies {
@@ -58,6 +60,7 @@ dependencies {
 
 	modImplementation "maven.modrinth:paxi:1.20-Fabric-4.0"
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+	//include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.3.2-beta.3")))
 }
 
 loom {
