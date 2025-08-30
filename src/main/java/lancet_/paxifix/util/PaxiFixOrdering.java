@@ -2,17 +2,10 @@ package lancet_.paxifix.util;
 
 import com.google.gson.annotations.SerializedName;
 
-import java.util.ArrayList;
+public record PaxiFixOrdering(@SerializedName("loadOrder") String[] orderedPackNames) {
 
-public class PaxiFixOrdering {
-    @SerializedName("loadOrder")
-    private final ArrayList<String> orderedPackNames;
-
-    public PaxiFixOrdering(ArrayList<String> orderedPackNames) {
-        this.orderedPackNames = orderedPackNames;
-    }
-
-    public ArrayList<String> getOrderedPackNames() {
+    @Override
+    public String[] orderedPackNames() {
         return this.orderedPackNames;
     }
 }
