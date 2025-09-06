@@ -7,11 +7,11 @@ This is an addon for [Paxi](https://modrinth.com/mod/paxi), serving four purpose
 
 #
 
-### How to use?
-Unlike how old load order works, now you can specify directories in your instance's folder.
+### How to use?  
+Unlike how old load order works, now you can specify directories in your instance's folder.  
 
-For your information, for using the built-in packs feature you need the ID of the pack, which is you need to either check the mod's source code, guess it, or just use [Resource Pack Overrides](https://modrinth.com/mod/resource-pack-overrides) mod and hold D in the resourcepack screen to see the IDs of every pack
-## Paxi Load Order JSON Example:
+Also, for using the built-in pack support, you need the ID of the pack. You can either check the mod’s source code, try to guess it, or use the [Resource Pack Overrides](https://modrinth.com/mod/resource-pack-overrides) mod and hold **D** on the resourcepack screen to see the IDs of all packs.
+## Paxi Load Order JSON Example:  
 ![Load Order](https://cdn.modrinth.com/data/cached_images/72011dd3b154f817cc47ece45de87295338e6365.png)
-## In Game:
+## In Game:    
 ![In Game](https://cdn.modrinth.com/data/cached_images/e5fc65d19f82bcab34e0663832a9fcab3ecbc967.png)
