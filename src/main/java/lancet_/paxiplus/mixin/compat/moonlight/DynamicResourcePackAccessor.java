@@ -9,6 +9,6 @@ import java.util.function.Supplier;
 
 @Mixin(DynamicResourcePack.class)
 public interface DynamicResourcePackAccessor {
-    @Accessor("metadata")
+    @Accessor(value = "metadata", remap = false)
     Supplier<PackMetadataSection> metadata();
 }

@@ -91,7 +91,9 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
         }
         File folder = ((FolderRepositorySourceAccessor) this).getFolder().toFile();
         if (!folder.isDirectory()) {
-            folder.mkdirs();
+            if (!folder.mkdirs()){
+                PaxiPlus.LOGGER.info("Couldn't create a folder for packs");
+            }
         }
 
         if (this.ordering != null && !this.ordering.isFile()) {
