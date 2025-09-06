@@ -1,34 +1,44 @@
 {
-	"schemaVersion": 1,
-	"id": "paxifix",
-	"version": "${version}",
-	"name": "PaxiFix",
-	"description": "An addon for Paxi, porting 1.21 feature for loading packs from any folder in-game!",
-	"authors": [
-		"Lancet_",
-		"Fyoncle"
-	],
-	"contact": {
-		"homepage": "https://modrinth.com/mod/paxifix",
-		"sources": "https://github.com/Lancet-crow/paxifix"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/paxifix/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"lancet_.paxifix.PaxiFix"
-		]
-	},
-	"mixins": [
-		"paxifix.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.16.13",
-		"minecraft": "~1.20.1",
-		"java": ">=17",
-		"fabric-api": "*",
-		"yungsapi": ">=1.20-Fabric-4.0.1",
-		"paxi": ">=1.20-Fabric-4.0"
-	}
+  "schemaVersion": 1,
+  "id": "paxiplus",
+  "version": "${version}",
+  "name": "Paxi Plus",
+  "description": "An addon for Paxi, porting 1.21+ feature for loading packs from any folder and supporting built-in packs!",
+  "authors": [
+    "Lancet_"
+  ],
+  "contributors": [
+    "Fyoncle"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/paxiplus",
+    "sources": "https://github.com/Lancet-crow/paxiplus",
+    "issues": "https://github.com/Lancet-crow/paxiplus/issues"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/paxiplus/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "lancet_.paxiplus.PaxiPlus"
+    ]
+  },
+  "mixins": [
+	  "paxiplus.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.13",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*",
+    "yungsapi": "*",
+    "paxi": ">=1.20-Fabric-4.0"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://discord.gg/RQ9cCyMr5Z"
+      }
+    }
+  }
 }

@@ -1,5 +1,0 @@
-{
-  "text.autoconfig.paxifix.title": "PaxiFix",
-  "text.autoconfig.paxifix.option.general.loadFromBaseDatapacksDirectory": "Load from base 'datapacks' directory",
-  "text.autoconfig.paxifix.option.general.loadFromBaseDatapacksDirectory.@Tooltip": "Whether Paxi should also force-load any data packs in the 'datapacks' folder in the base Minecraft folder. This is for compatibility with CurseForge's new data pack system."
-}

@@ -1,9 +1,9 @@
 {
   "required": true,
-  "package": "lancet_.paxifix.mixin",
+  "package": "lancet_.paxiplus.mixin",
   "compatibilityLevel": "JAVA_17",
-  "plugin": "lancet_.paxifix.mixin.PaxiFixMixinPlugin",
-  "refmap": "paxifix.refmap.json",
+  "plugin": "lancet_.paxiplus.mixin.PaxiPlusMixinPlugin",
+  "refmap": "paxiplus.refmap.json",
   "mixins": [
     "PackRepositoryMixin",
     "PaxiMixin",
@@ -12,10 +12,10 @@
     "compat.moonlight.DynamicResourcePackAccessor",
     "compat.moonlight.DynamicResourcePackMixin"
   ],
-  "injectors": {
-    "defaultRequire": 1
-  },
   "client": [
     "OptionsMixin"
-  ]
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

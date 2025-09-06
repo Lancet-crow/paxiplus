@@ -1,4 +1,4 @@
-package lancet_.paxifix.mixin.compat.moonlight;
+package lancet_.paxiplus.mixin.compat.moonlight;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import net.mehvahdjukaar.moonlight.api.resources.pack.DynamicResourcePack;
@@ -15,10 +15,10 @@ public class DynamicResourcePackMixin {
     @Inject(method = "readPackInfo",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/server/packs/PackResources;getMetadataSection(Lnet/minecraft/server/packs/metadata/MetadataSectionSerializer;)Ljava/lang/Object;",
-            shift = At.Shift.BEFORE),
+                    shift = At.Shift.BEFORE),
             cancellable = true)
-    private static void checkIfMoonlightDynamicPack(String string, Pack.ResourcesSupplier resourcesSupplier, CallbackInfoReturnable<Pack.Info> cir, @Local PackResources packResources){
-        if (packResources.packId().equals("Moonlight Mods Dynamic Assets")){
+    private static void checkIfMoonlightDynamicPack(String string, Pack.ResourcesSupplier resourcesSupplier, CallbackInfoReturnable<Pack.Info> cir, @Local PackResources packResources) {
+        if (packResources.packId().equals("Moonlight Mods Dynamic Assets")) {
             DynamicResourcePack dynamicResourcePack = (DynamicResourcePack) packResources;
             DynamicResourcePackAccessor dynamicResourcePackAccessor = (DynamicResourcePackAccessor) dynamicResourcePack;
             cir.setReturnValue(new Pack.Info(dynamicResourcePackAccessor.metadata().get().getDescription(),

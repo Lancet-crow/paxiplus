@@ -59,7 +59,7 @@ dependencies {
 
 loom {
 	mixin {
-		defaultRefmapName = "paxifix.refmap.json"
+		defaultRefmapName = "paxiplus.refmap.json"
 	}
 	runs {
 		client {

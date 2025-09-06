@@ -1,10 +1,11 @@
-package lancet_.paxifix.mixin;
+package lancet_.paxiplus.mixin;
 
 import com.google.common.collect.Sets;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import com.yungnickyoung.minecraft.paxi.PaxiPackSource;
-import lancet_.paxifix.interfaces.*;
+import lancet_.paxiplus.interfaces.PackRepositoryTricks;
+import lancet_.paxiplus.interfaces.PaxiRepositorySourceTricks;
 import net.minecraft.client.Options;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -30,7 +31,7 @@ public class OptionsMixin {
 
     @Inject(method = "loadSelectedResourcePacks",
             at = @At(value = "HEAD"))
-    private void messUpWithLoadingSelectedPacks(PackRepository packRepository, CallbackInfo ci){
+    private void messUpWithLoadingSelectedPacks(PackRepository packRepository, CallbackInfo ci) {
         packsToUnload.clear();
         Optional<RepositorySource> repoSource = ((PackRepositoryTricks) packRepository).getPaxiRepositorySource();
         repoSource.ifPresent(repositorySource -> this.paxiSource = (PaxiRepositorySourceTricks) repositorySource);
@@ -39,21 +40,20 @@ public class OptionsMixin {
     @Inject(method = "loadSelectedResourcePacks",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/server/packs/repository/PackRepository;getPack(Ljava/lang/String;)Lnet/minecraft/server/packs/repository/Pack;",
-            shift = At.Shift.AFTER))
+                    shift = At.Shift.AFTER))
     private void tryToStopLoading(PackRepository packRepository, CallbackInfo ci,
-                                  @Local String string){
+                                  @Local String string) {
         Pack pack = packRepository.getPack(string);
-        if (pack == null){
+        if (pack == null) {
             pack = packRepository.getPack("file/" + string);
             if (pack != null && !string.startsWith("file/") &&
                     !pack.getPackSource().equals(PaxiPackSource.PACK_SOURCE_PAXI)) {
                 packsToUnload.add(string);
             }
-        }
-        else{
+        } else {
             if (!string.startsWith("file/") &&
                     !pack.getPackSource().equals(PaxiPackSource.PACK_SOURCE_PAXI) &&
-                    this.paxiSource.orderedPacks().contains(string)){
+                    this.paxiSource.orderedPacks().contains(string)) {
                 packsToUnload.add(string);
             }
         }
@@ -63,14 +63,13 @@ public class OptionsMixin {
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/server/packs/repository/PackRepository;setSelected(Ljava/util/Collection;)V"))
     private void unloadPacks(PackRepository packRepository, CallbackInfo ci,
-                                  @Local LocalRef<Set<String>> set){
+                             @Local LocalRef<Set<String>> set) {
         Set<String> newPacksSet = Sets.newLinkedHashSet();
         newPacksSet.addAll(set.get());
         packsToUnload.forEach((string) -> {
-            if(newPacksSet.stream().anyMatch((x) -> x.equals(string))){
+            if (newPacksSet.stream().anyMatch((x) -> x.equals(string))) {
                 newPacksSet.remove(string);
-            }
-            else if (newPacksSet.stream().anyMatch((x) -> x.equals("file/" + string))){
+            } else if (newPacksSet.stream().anyMatch((x) -> x.equals("file/" + string))) {
                 newPacksSet.remove("file/" + string);
             }
         });

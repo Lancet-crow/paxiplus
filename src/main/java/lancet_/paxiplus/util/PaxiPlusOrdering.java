@@ -1,8 +1,8 @@
-package lancet_.paxifix.util;
+package lancet_.paxiplus.util;
 
 import com.google.gson.annotations.SerializedName;
 
-public record PaxiFixOrdering(@SerializedName("loadOrder") String[] orderedPackNames) {
+public record PaxiPlusOrdering(@SerializedName("loadOrder") String[] orderedPackNames) {
 
     @Override
     public String[] orderedPackNames() {

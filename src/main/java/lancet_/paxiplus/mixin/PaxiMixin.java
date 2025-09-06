@@ -1,4 +1,4 @@
-package lancet_.paxifix.mixin;
+package lancet_.paxiplus.mixin;
 
 import com.google.common.collect.Lists;
 import com.google.gson.JsonIOException;
@@ -10,11 +10,12 @@ import com.yungnickyoung.minecraft.paxi.PaxiPackSource;
 import com.yungnickyoung.minecraft.paxi.PaxiRepositorySource;
 import com.yungnickyoung.minecraft.paxi.mixin.accessor.FolderRepositorySourceAccessor;
 import com.yungnickyoung.minecraft.yungsapi.io.JSON;
-import lancet_.paxifix.PaxiFix;
-import lancet_.paxifix.interfaces.PackRepositoryTricks;
-import lancet_.paxifix.mixin.accessor.*;
-import lancet_.paxifix.interfaces.PaxiRepositorySourceTricks;
-import lancet_.paxifix.util.PaxiFixOrdering;
+import lancet_.paxiplus.PaxiPlus;
+import lancet_.paxiplus.interfaces.PackRepositoryTricks;
+import lancet_.paxiplus.interfaces.PaxiRepositorySourceTricks;
+import lancet_.paxiplus.mixin.accessor.FilePackResourcesAccessor;
+import lancet_.paxiplus.mixin.accessor.PackAccessor;
+import lancet_.paxiplus.util.PaxiPlusOrdering;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.FilePackResources;
@@ -24,7 +25,10 @@ import net.minecraft.server.packs.repository.FolderRepositorySource;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.PackSource;
-import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -37,33 +41,44 @@ import java.util.stream.Stream;
 @Mixin(value = PaxiRepositorySource.class, remap = false)
 public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRepositorySourceTricks {
 
-    @Shadow private File ordering;
+    @Shadow
+    @Final
+    private static FileFilter PACK_FILTER;
+    @Shadow
+    public List<String> orderedPaxiPacks;
 
-    @Shadow public List<String> orderedPaxiPacks;
-
-    @Shadow public List<String> unorderedPaxiPacks;
+    @Shadow
+    public List<String> unorderedPaxiPacks;
+    @Shadow
+    private File ordering;
+    @Unique
+    private List<String> orderedPacks = new ArrayList<>();
+    @Unique
+    private List<Pack> builtinPacks = new ArrayList<>();
+    @Unique
+    private PackRepository packRepository;
 
     public PaxiMixin(Path path, PackType packType, PackSource packSource) {
         super(path, packType, packSource);
     }
 
-    @Shadow protected abstract Pack.ResourcesSupplier createPackResourcesSupplier(Path path);
+    @Unique
+    private static List<Path> toPaths(List<File> files) {
+        return files.stream().map(File::toPath).toList();
+    }
 
-    @Shadow @Final private static FileFilter PACK_FILTER;
+    @Shadow
+    protected abstract Pack.ResourcesSupplier createPackResourcesSupplier(Path path);
 
-    @Shadow protected abstract List<File> filesFromNames(String[] packFileNames, FileFilter filter);
-
-    @Unique private List<String> orderedPacks = new ArrayList<>();
-    @Unique private List<Pack> builtinPacks = new ArrayList<>();
-
-    @Unique private PackRepository packRepository;
+    @Shadow
+    protected abstract List<File> filesFromNames(String[] packFileNames, FileFilter filter);
 
     @Override
     public List<String> orderedPacks() {
         return orderedPacks;
     }
 
-    public void loadPacksTrick(Consumer<Pack> packAdder, PackRepository packRepository){
+    public void loadPacksTrick(Consumer<Pack> packAdder, PackRepository packRepository) {
         this.packRepository = packRepository;
         this.loadPacks(packAdder);
         this.packRepository = null;
@@ -71,16 +86,16 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
 
     @Override
     public void loadPacks(Consumer<Pack> packAdder) {
-        if (this.packRepository == null){
+        if (this.packRepository == null) {
             return;
         }
-        File folder = ((FolderRepositorySourceAccessor)this).getFolder().toFile();
+        File folder = ((FolderRepositorySourceAccessor) this).getFolder().toFile();
         if (!folder.isDirectory()) {
             folder.mkdirs();
         }
 
         if (this.ordering != null && !this.ordering.isFile()) {
-            PaxiFixOrdering emptyPackOrdering = new PaxiFixOrdering(new String[0]);
+            PaxiPlusOrdering emptyPackOrdering = new PaxiPlusOrdering(new String[0]);
             try {
                 JSON.createJsonFileFromObject(this.ordering.toPath(), emptyPackOrdering);
             } catch (IOException e) {
@@ -89,32 +104,32 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
             }
         }
         List<Path> packPathsToLoad = toPaths(loadPacksFromFiles());
-        for (String packId: this.orderedPacks){
+        for (String packId : this.orderedPacks) {
             Pack pack = null;
             String strippedPackId = packId.replaceFirst("paxi/", "");
-            if (packPathsToLoad.stream().anyMatch(path -> path.toString().contains(strippedPackId))){
+            if (packPathsToLoad.stream().anyMatch(path -> path.toString().contains(strippedPackId))) {
                 Path packPath = packPathsToLoad.stream().filter(path -> path.toString().contains(strippedPackId)).findFirst().orElse(null);
-                if (packPath == null){
-                    PaxiFix.LOGGER.info("Couldn't load pack with id from file paths: {}", packId);
+                if (packPath == null) {
+                    PaxiPlus.LOGGER.info("Couldn't load pack with id from file paths: {}", packId);
                     continue;
                 }
                 String packName = packPath.getFileName().toString();
                 Component packTitle = Component.literal(packName);
                 PackRepository packRepository;
                 PackType packType = ((FolderRepositorySourceAccessor) this).getPackType();
-                if (packType.equals(PackType.CLIENT_RESOURCES)){
+                if (packType.equals(PackType.CLIENT_RESOURCES)) {
                     packRepository = Minecraft.getInstance().getResourcePackRepository();
                     Map<String, Pack> map = ((PackRepositoryTricks) packRepository).getAlreadyAvailablePacks();
                     if (map.values().stream().anyMatch(mapPack -> {
-                        try (PackResources packResources = ((PackAccessor)mapPack).paxi_plus$resources().open(mapPack.getId())){
-                            if (packResources instanceof FilePackResources filePackResources){
-                                if (((FilePackResourcesAccessor)filePackResources).file().getName().equals(packName)){
+                        try (PackResources packResources = ((PackAccessor) mapPack).paxi_plus$resources().open(mapPack.getId())) {
+                            if (packResources instanceof FilePackResources filePackResources) {
+                                if (((FilePackResourcesAccessor) filePackResources).file().getName().equals(packName)) {
                                     return true;
                                 }
                             }
                         }
                         return false;
-                    })){
+                    })) {
                         packTitle = map.get("file/" + strippedPackId).getTitle();
                     }
                 }
@@ -124,16 +139,15 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
                         ((FolderRepositorySourceAccessor) this).getPackType(),
                         Pack.Position.TOP, PaxiPackSource.PACK_SOURCE_PAXI
                 );
-            }
-            else if (this.builtinPacks.stream().anyMatch(builtInPack -> builtInPack.getId().equals(strippedPackId))){
+            } else if (this.builtinPacks.stream().anyMatch(builtInPack -> builtInPack.getId().equals(strippedPackId))) {
                 Pack builtinPack = this.builtinPacks.stream().filter(builtPack -> builtPack.getId().equals(strippedPackId)).findFirst().orElse(null);
-                if (builtinPack == null){
-                    PaxiFix.LOGGER.info("Couldn't load pack with id from built-in packs: {}", packId);
+                if (builtinPack == null) {
+                    PaxiPlus.LOGGER.info("Couldn't load pack with id from built-in packs: {}", packId);
                     continue;
                 }
                 pack = Pack.readMetaAndCreate(
                         "paxi/" + builtinPack.getId(), builtinPack.getTitle(), true,
-                        ((PackAccessor)builtinPack).paxi_plus$resources(),
+                        ((PackAccessor) builtinPack).paxi_plus$resources(),
                         ((FolderRepositorySourceAccessor) this).getPackType(),
                         Pack.Position.TOP, PaxiPackSource.PACK_SOURCE_PAXI
                 );
@@ -148,20 +162,20 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
     @Unique
     private List<File> loadPacksFromFiles() {
         // Reset ordered and unordered pack lists
-        //PaxiFix.LOGGER.info("Preparing to clear orderedPaxiPacks");
+        //PaxiPlus.LOGGER.info("Preparing to clear orderedPaxiPacks");
         this.orderedPaxiPacks.clear();
-        //PaxiFix.LOGGER.info("Preparing to clear unorderedPaxiPacks");
+        //PaxiPlus.LOGGER.info("Preparing to clear unorderedPaxiPacks");
         this.unorderedPaxiPacks.clear();
-        //PaxiFix.LOGGER.info("Preparing to clear orderedPacks");
+        //PaxiPlus.LOGGER.info("Preparing to clear orderedPacks");
         this.orderedPacks.clear();
-        //PaxiFix.LOGGER.info("Preparing to clear builtinPacks");
+        //PaxiPlus.LOGGER.info("Preparing to clear builtinPacks");
         this.builtinPacks.clear();
 
         if (this.ordering != null) {
             // If ordering file exists, load any specified files in the specific order
-            PaxiFixOrdering packOrdering = null;
+            PaxiPlusOrdering packOrdering = null;
             try {
-                packOrdering = JSON.loadObjectFromJsonFile(this.ordering.toPath(), PaxiFixOrdering.class);
+                packOrdering = JSON.loadObjectFromJsonFile(this.ordering.toPath(), PaxiPlusOrdering.class);
             } catch (IOException | JsonIOException | JsonSyntaxException e) {
                 PaxiCommon.LOGGER.error("Error loading Paxi ordering JSON file {}: {}", this.ordering.getName(), e.toString());
             }
@@ -190,9 +204,9 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
                 orderedList.removeIf(string -> !this.orderedPacks.contains(string) &&
                         orderedPacks.stream().noneMatch(file -> string.endsWith(file.getName())));
                 List<String> finalOrderList = new ArrayList<>();
-                for (String packName: orderedList){
+                for (String packName : orderedList) {
                     Optional<String> foundPackName = this.orderedPacks.stream().filter(string -> string.equals(packName) || packName.endsWith(string)).findFirst();
-                    if (foundPackName.isEmpty()){
+                    if (foundPackName.isEmpty()) {
                         continue;
                     }
                     finalOrderList.add(foundPackName.get());
@@ -209,18 +223,18 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
     }
 
     @WrapMethod(method = "filesFromNames")
-    private List<File> paxiFix$filesFromNames(String[] packFileNames, FileFilter filter, Operation<List<File>> original) {
+    private List<File> paxiPlus$filesFromNames(String[] packFileNames, FileFilter filter, Operation<List<File>> original) {
         ArrayList<File> packFiles = new ArrayList<>();
 
         for (String fileName : packFileNames) {
 
             // Skip built-in packs
-            if (this.builtinPacks.stream().anyMatch(pack -> pack.getId().equals(fileName))){
+            if (this.builtinPacks.stream().anyMatch(pack -> pack.getId().equals(fileName))) {
                 continue;
             }
 
             // First, check for the pack as-is, using the base Minecraft folder as the base directory
-            File packFile = new File(PaxiFix.BASE_GAME_DIRECTORY, fileName);
+            File packFile = new File(PaxiPlus.BASE_GAME_DIRECTORY, fileName);
 
             if (!packFile.exists()) {
                 // If the pack doesn't exist, check for it in the Paxi datapacks/resourcepacks directory.
@@ -240,26 +254,21 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
         }
         return packFiles;
     }
-    @Unique
-    private static List<Path> toPaths(List<File> files) {
-        return files.stream().map(File::toPath).toList();
-    }
 
     @Unique
-    private List<Pack> paxiPlus$findBuiltinPacks(String[] packFileNames){
+    private List<Pack> paxiPlus$findBuiltinPacks(String[] packFileNames) {
         List<Pack> builtinPacks = new ArrayList<>();
         Map<String, Pack> map = ((PackRepositoryTricks) this.packRepository).getAlreadyAvailablePacks();
         for (String fileName : packFileNames) {
-            File packFile = new File(PaxiFix.BASE_GAME_DIRECTORY, fileName);
+            File packFile = new File(PaxiPlus.BASE_GAME_DIRECTORY, fileName);
             if (packFile.exists()) {
                 continue;
             }
-            if (map.containsKey(fileName)){
+            if (map.containsKey(fileName)) {
                 Pack pack = map.get(fileName);
                 builtinPacks.add(pack);
-            }
-            else{
-                PaxiFix.LOGGER.error("Pack {} is not available at the time of loading Paxi.", fileName);
+            } else {
+                PaxiPlus.LOGGER.error("Pack {} is not available at the time of loading Paxi.", fileName);
             }
         }
         return builtinPacks;

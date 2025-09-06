@@ -1,4 +1,4 @@
-package lancet_.paxifix.mixin;
+package lancet_.paxiplus.mixin;
 
 import com.google.common.collect.ImmutableMap;
 import net.fabricmc.loader.api.FabricLoader;
@@ -11,12 +11,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class PaxiFixMixinPlugin implements IMixinConfigPlugin {
+public class PaxiPlusMixinPlugin implements IMixinConfigPlugin {
     private static final Supplier<Boolean> TRUE = () -> true;
 
     private static final Map<String, Supplier<Boolean>> CONDITIONS = ImmutableMap.of(
-            "lancet_.paxifix.mixin.compat.moonlight.DynamicResourcePackAccessor", () -> FabricLoader.getInstance().isModLoaded("moonlight"),
-            "lancet_.paxifix.mixin.compat.moonlight.DynamicResourcePackMixin", () -> FabricLoader.getInstance().isModLoaded("moonlight")
+            "lancet_.paxiplus.mixin.compat.moonlight.DynamicResourcePackAccessor", () -> FabricLoader.getInstance().isModLoaded("moonlight"),
+            "lancet_.paxiplus.mixin.compat.moonlight.DynamicResourcePackMixin", () -> FabricLoader.getInstance().isModLoaded("moonlight")
     );
 
     @Override
