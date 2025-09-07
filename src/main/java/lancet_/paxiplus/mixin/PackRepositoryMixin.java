@@ -43,12 +43,17 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
         Optional<RepositorySource> paxiRepositorySource = Optional.empty();
 
         // Data-pack only
-        Optional<ModResourcePackCreator> moddedPackRepositorySource = this.sources.stream()
-                .filter(provider -> provider instanceof ModResourcePackCreator)
-                .findFirst()
-                .map(repositorySource -> (ModResourcePackCreator) repositorySource);
-        if (moddedPackRepositorySource.isPresent()) {
-            paxiRepositorySource = Optional.of(((IPaxiSourceProvider) moddedPackRepositorySource.get()).getPaxiSource());
+        if (!isClient){
+            Optional<ModResourcePackCreator> moddedPackRepositorySource = this.sources.stream()
+                    .filter(provider -> provider instanceof ModResourcePackCreator)
+                    .findFirst()
+                    .map(repositorySource -> (ModResourcePackCreator) repositorySource);
+            if (moddedPackRepositorySource.isPresent()) {
+                paxiRepositorySource = Optional.of(((IPaxiSourceProvider) moddedPackRepositorySource.get()).getPaxiSource());
+            }
+            else{
+                PaxiPlus.LOGGER.error("Can't find a Paxi repository for datapacks when loading Paxi");
+            }
         }
 
         // Resource-pack only.
@@ -56,6 +61,9 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
         // classes when using Paxi on a dedicated server.
         if (paxiRepositorySource.isEmpty() && isClient) {
             paxiRepositorySource = ClientMixinUtil.getClientRepositorySource(this.sources);
+            if (paxiRepositorySource.isEmpty()){
+                PaxiPlus.LOGGER.error("Can't find a Paxi repository for resourcepacks when loading Paxi");
+            }
         }
 
         return paxiRepositorySource;

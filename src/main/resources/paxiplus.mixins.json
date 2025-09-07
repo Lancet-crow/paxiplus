@@ -5,6 +5,7 @@
   "plugin": "lancet_.paxiplus.mixin.PaxiPlusMixinPlugin",
   "refmap": "paxiplus.refmap.json",
   "mixins": [
+    "ClientPackSourceMixin",
     "PackRepositoryMixin",
     "PaxiMixin",
     "accessor.FilePackResourcesAccessor",
