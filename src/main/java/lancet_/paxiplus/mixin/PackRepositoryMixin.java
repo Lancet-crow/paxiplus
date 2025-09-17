@@ -11,12 +11,11 @@ import com.yungnickyoung.minecraft.paxi.util.IPaxiSourceProvider;
 import lancet_.paxiplus.PaxiPlus;
 import lancet_.paxiplus.interfaces.PackRepositoryTricks;
 import lancet_.paxiplus.interfaces.PaxiRepositorySourceTricks;
-import net.fabricmc.api.EnvType;
 import net.fabricmc.fabric.impl.resource.loader.ModResourcePackCreator;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.RepositorySource;
+import net.minecraft.server.packs.repository.ServerPacksSource;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -39,11 +38,14 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
 
     @Unique
     public Optional<RepositorySource> getPaxiRepositorySource() {
-        boolean isClient = FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT;
+        boolean isClient = this.sources.stream().noneMatch(source -> source instanceof ServerPacksSource);
         Optional<RepositorySource> paxiRepositorySource = Optional.empty();
 
         // Data-pack only
         if (!isClient){
+            if (this.sources.stream().noneMatch(provider -> provider instanceof ModResourcePackCreator)){
+                PaxiPlus.LOGGER.error("how the fuck did we get here");
+            }
             Optional<ModResourcePackCreator> moddedPackRepositorySource = this.sources.stream()
                     .filter(provider -> provider instanceof ModResourcePackCreator)
                     .findFirst()

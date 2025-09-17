@@ -6,6 +6,7 @@
   "refmap": "paxiplus.refmap.json",
   "mixins": [
     "ClientPackSourceMixin",
+    "ModResourcePackCreatorMixin",
     "PackRepositoryMixin",
     "PaxiMixin",
     "accessor.FilePackResourcesAccessor",
