@@ -30,9 +30,9 @@ public class ModResourcePackCreatorMixin implements IPaxiSourceProvider {
 
     @Inject(
             method = {"<init>"},
-            at = {@At("TAIL")}
+            at = {@At("RETURN")}
     )
-    private void paxi_addPaxiRepositorySourceFabric(PackType type, CallbackInfo callback) {
+    private void paxi_addPaxiRepositorySourceFabric(PackType type, CallbackInfo ci) {
         createPaxiRepositorySource(type);
     }
 

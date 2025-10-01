@@ -16,7 +16,6 @@ import lancet_.paxiplus.interfaces.PaxiRepositorySourceTricks;
 import lancet_.paxiplus.mixin.accessor.FilePackResourcesAccessor;
 import lancet_.paxiplus.mixin.accessor.PackAccessor;
 import lancet_.paxiplus.util.PaxiPlusOrdering;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.FilePackResources;
 import net.minecraft.server.packs.PackResources;
@@ -117,10 +116,9 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
                 }
                 String packName = packPath.getFileName().toString();
                 Component packTitle = Component.literal(packName);
-                PackRepository packRepository;
+                PackRepository packRepository = this.packRepository;
                 PackType packType = ((FolderRepositorySourceAccessor) this).getPackType();
                 if (packType.equals(PackType.CLIENT_RESOURCES)) {
-                    packRepository = Minecraft.getInstance().getResourcePackRepository();
                     Map<String, Pack> map = ((PackRepositoryTricks) packRepository).getAlreadyAvailablePacks();
                     if (map.values().stream().anyMatch(mapPack -> {
                         try (PackResources packResources = ((PackAccessor) mapPack).paxi_plus$resources().open(mapPack.getId())) {
@@ -270,7 +268,8 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
                 Pack pack = map.get(fileName);
                 builtinPacks.add(pack);
             } else {
-                PaxiPlus.LOGGER.error("Pack {} is not available at the time of loading Paxi.", fileName);
+                PaxiPlus.LOGGER.error("Pack {} is not available at the time of loading Paxi, can't find in a map: {}.", fileName,
+                        String.join(", ", map.keySet()));
             }
         }
         return builtinPacks;

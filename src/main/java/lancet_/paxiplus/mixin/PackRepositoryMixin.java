@@ -43,9 +43,6 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
 
         // Data-pack only
         if (!isClient){
-            if (this.sources.stream().noneMatch(provider -> provider instanceof ModResourcePackCreator)){
-                PaxiPlus.LOGGER.error("how the fuck did we get here");
-            }
             Optional<ModResourcePackCreator> moddedPackRepositorySource = this.sources.stream()
                     .filter(provider -> provider instanceof ModResourcePackCreator)
                     .findFirst()
@@ -110,10 +107,10 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
         return map;
     }
 
-    @Inject(method = "discoverAvailable", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/packs/repository/RepositorySource;loadPacks(Ljava/util/function/Consumer;)V"))
+    @Inject(method = "discoverAvailable", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/packs/repository/RepositorySource;loadPacks(Ljava/util/function/Consumer;)V", shift = At.Shift.AFTER))
     private void pullOutPacksInDiscoveringProcess(CallbackInfoReturnable<Map<String, Pack>> cir, @Local LocalRef<Map<String, Pack>> map, @Local RepositorySource repositorySource) {
         this.loadingPacksMap = map.get();
-
+        PaxiPlus.LOGGER.info("Loaded new packs: {}", String.join(", ", this.loadingPacksMap.keySet()));
         if (sources.stream().toList().indexOf(repositorySource) == sources.size() - 1) {
             Optional<RepositorySource> repoSource = getPaxiRepositorySource();
             if (repoSource.isEmpty()) {
