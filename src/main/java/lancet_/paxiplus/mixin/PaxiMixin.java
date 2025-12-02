@@ -77,6 +77,40 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
         return orderedPacks;
     }
 
+    @Unique
+    private static final Map<String, String> CUSTOM_TAGS = Map.ofEntries(
+            Map.entry("USER_PACKS", "--user--")
+    );
+    @Unique
+    private Map<String, Boolean> orderedTags = new HashMap<>();
+
+    @Override
+    public Map<String, String> CUSTOM_TAGS() {
+        return CUSTOM_TAGS;
+    }
+
+    @Unique
+    private List<Pack> afterUserPacks = new ArrayList<>();
+
+    @Override
+    public List<Pack> afterUserPacks() {
+        return afterUserPacks == null ? new ArrayList<>() : afterUserPacks;
+    }
+
+    @Unique
+    private boolean isTagPresentAndActive(String tag) {
+        String realTag = CUSTOM_TAGS.get(tag);
+        return orderedTags.containsKey(realTag) && orderedTags.get(realTag);
+    }
+
+    public void loadAfterUserPacksTrick(Consumer<Pack> packAdder, List<Pack> afterUserPacks) {
+        for (Pack pack : afterUserPacks) {
+            if (pack != null) {
+                packAdder.accept(pack);
+            }
+        }
+    }
+
     public void loadPacksTrick(Consumer<Pack> packAdder, PackRepository packRepository) {
         this.packRepository = packRepository;
         this.loadPacks(packAdder);
@@ -90,8 +124,8 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
         }
         File folder = ((FolderRepositorySourceAccessor) this).getFolder().toFile();
         if (!folder.isDirectory()) {
-            if (!folder.mkdirs()){
-                PaxiPlus.LOGGER.info("Couldn't create a folder for packs");
+            if (!folder.mkdirs()) {
+                PaxiPlus.LOGGER.warn("Couldn't create a folder for packs");
             }
         }
 
@@ -111,7 +145,7 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
             if (packPathsToLoad.stream().anyMatch(path -> path.toString().contains(strippedPackId))) {
                 Path packPath = packPathsToLoad.stream().filter(path -> path.toString().contains(strippedPackId)).findFirst().orElse(null);
                 if (packPath == null) {
-                    PaxiPlus.LOGGER.info("Couldn't load pack with id from file paths: {}", packId);
+                    PaxiPlus.LOGGER.warn("Couldn't load pack with id from file paths: {}", packId);
                     continue;
                 }
                 String packName = packPath.getFileName().toString();
@@ -151,9 +185,15 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
                         ((FolderRepositorySourceAccessor) this).getPackType(),
                         Pack.Position.TOP, PaxiPackSource.PACK_SOURCE_PAXI
                 );
+            } else if (this.orderedTags.containsKey(packId)) {
+                orderedTags.replace(packId, false);
             }
 
             if (pack != null) {
+                if (isTagPresentAndActive("USER_PACKS")) {
+                    afterUserPacks.add(pack);
+                    continue;
+                }
                 packAdder.accept(pack);
             }
         }
@@ -162,14 +202,12 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
     @Unique
     private List<File> loadPacksFromFiles() {
         // Reset ordered and unordered pack lists
-        //PaxiPlus.LOGGER.info("Preparing to clear orderedPaxiPacks");
         this.orderedPaxiPacks.clear();
-        //PaxiPlus.LOGGER.info("Preparing to clear unorderedPaxiPacks");
         this.unorderedPaxiPacks.clear();
-        //PaxiPlus.LOGGER.info("Preparing to clear orderedPacks");
         this.orderedPacks.clear();
-        //PaxiPlus.LOGGER.info("Preparing to clear builtinPacks");
         this.builtinPacks.clear();
+        this.afterUserPacks.clear();
+        this.orderedTags.clear();
 
         if (this.ordering != null) {
             // If ordering file exists, load any specified files in the specific order
@@ -202,17 +240,22 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
                 this.builtinPacks.forEach(pack -> this.orderedPacks.add(pack.getId()));
                 List<String> orderedList = new ArrayList<>(Arrays.stream(packOrdering.orderedPackNames()).toList());
                 orderedList.removeIf(string -> !this.orderedPacks.contains(string) &&
-                        orderedPacks.stream().noneMatch(file -> string.endsWith(file.getName())));
+                        orderedPacks.stream().noneMatch(file -> string.endsWith(file.getName())) && !CUSTOM_TAGS.containsValue(string));
                 List<String> finalOrderList = new ArrayList<>();
                 for (String packName : orderedList) {
                     Optional<String> foundPackName = this.orderedPacks.stream().filter(string -> string.equals(packName) || packName.endsWith(string)).findFirst();
                     if (foundPackName.isEmpty()) {
+                        if (CUSTOM_TAGS.containsValue(packName)) {
+                            if (orderedTags.containsKey(packName)) continue;
+                            finalOrderList.add(packName);
+                            orderedTags.put(packName, true);
+                        }
                         continue;
                     }
                     finalOrderList.add(foundPackName.get());
                 }
                 this.orderedPacks = finalOrderList;
-                finalOrderList.replaceAll(string -> "paxi/" + string);
+                finalOrderList.replaceAll(string -> CUSTOM_TAGS.containsValue(string) ? string : "paxi/" + string);
                 this.orderedPaxiPacks.addAll(finalOrderList);
                 unorderedPacks.forEach(file -> this.unorderedPaxiPacks.add(file.getName()));
 
@@ -230,6 +273,9 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
 
             // Skip built-in packs
             if (this.builtinPacks.stream().anyMatch(pack -> pack.getId().equals(fileName))) {
+                continue;
+            }
+            if (CUSTOM_TAGS.containsValue(fileName)) {
                 continue;
             }
 
@@ -260,6 +306,9 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
         List<Pack> builtinPacks = new ArrayList<>();
         Map<String, Pack> map = ((PackRepositoryTricks) this.packRepository).getAlreadyAvailablePacks();
         for (String fileName : packFileNames) {
+            if (CUSTOM_TAGS.containsValue(fileName)) {
+                continue;
+            }
             File packFile = new File(PaxiPlus.BASE_GAME_DIRECTORY, fileName);
             if (packFile.exists()) {
                 continue;

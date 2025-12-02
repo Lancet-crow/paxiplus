@@ -41,20 +41,21 @@ public class ModResourcePackCreatorMixin implements IPaxiSourceProvider {
             at = {@At("TAIL")}
     )
     private void paxi_loadPaxiPacksFabric(Consumer<Pack> consumer, CallbackInfo ci) {
-        if (this.paxiRepositorySource == null) createPaxiRepositorySource(this.type);
+        if (this.paxiRepositorySource == null) this.paxiRepositorySource = createPaxiRepositorySource(this.type);
     }
 
     public PaxiRepositorySource getPaxiSource() {
-        if (this.paxiRepositorySource == null) createPaxiRepositorySource(this.type);
+        if (this.paxiRepositorySource == null) this.paxiRepositorySource = createPaxiRepositorySource(this.type);
         return this.paxiRepositorySource;
     }
 
     @Unique
-    private void createPaxiRepositorySource(PackType type){
+    private PaxiRepositorySource createPaxiRepositorySource(PackType type) {
         if (type == PackType.SERVER_DATA) {
-            this.paxiRepositorySource = new PaxiRepositorySource(PaxiCommon.DATA_PACK_DIRECTORY, type, PaxiCommon.DATAPACK_ORDERING_FILE);
+            return new PaxiRepositorySource(PaxiCommon.DATA_PACK_DIRECTORY, type, PaxiCommon.DATAPACK_ORDERING_FILE);
         } else if (type == PackType.CLIENT_RESOURCES) {
-            this.paxiRepositorySource = new PaxiRepositorySource(PaxiCommon.RESOURCE_PACK_DIRECTORY, type, PaxiCommon.RESOURCEPACK_ORDERING_FILE);
+            return new PaxiRepositorySource(PaxiCommon.RESOURCE_PACK_DIRECTORY, type, PaxiCommon.RESOURCEPACK_ORDERING_FILE);
         }
+        return null;
     }
 }

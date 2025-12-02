@@ -10,6 +10,7 @@ import com.yungnickyoung.minecraft.paxi.client.ClientMixinUtil;
 import com.yungnickyoung.minecraft.paxi.util.IPaxiSourceProvider;
 import lancet_.paxiplus.PaxiPlus;
 import lancet_.paxiplus.interfaces.PackRepositoryTricks;
+import lancet_.paxiplus.interfaces.PackTricks;
 import lancet_.paxiplus.interfaces.PaxiRepositorySourceTricks;
 import net.fabricmc.fabric.impl.resource.loader.ModResourcePackCreator;
 import net.minecraft.server.packs.repository.Pack;
@@ -42,15 +43,15 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
         Optional<RepositorySource> paxiRepositorySource = Optional.empty();
 
         // Data-pack only
-        if (!isClient){
+        if (!isClient) {
             Optional<ModResourcePackCreator> moddedPackRepositorySource = this.sources.stream()
                     .filter(provider -> provider instanceof ModResourcePackCreator)
                     .findFirst()
                     .map(repositorySource -> (ModResourcePackCreator) repositorySource);
             if (moddedPackRepositorySource.isPresent()) {
-                paxiRepositorySource = Optional.of(((IPaxiSourceProvider) moddedPackRepositorySource.get()).getPaxiSource());
-            }
-            else{
+                IPaxiSourceProvider paxiSourceProvider = ((IPaxiSourceProvider) moddedPackRepositorySource.get());
+                paxiRepositorySource = Optional.of(paxiSourceProvider.getPaxiSource());
+            } else {
                 PaxiPlus.LOGGER.error("Can't find a Paxi repository for datapacks when loading Paxi");
             }
         }
@@ -60,7 +61,7 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
         // classes when using Paxi on a dedicated server.
         if (paxiRepositorySource.isEmpty() && isClient) {
             paxiRepositorySource = ClientMixinUtil.getClientRepositorySource(this.sources);
-            if (paxiRepositorySource.isEmpty()){
+            if (paxiRepositorySource.isEmpty()) {
                 PaxiPlus.LOGGER.error("Can't find a Paxi repository for resourcepacks when loading Paxi");
             }
         }
@@ -78,10 +79,13 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
         } else {
             PaxiRepositorySource paxiRepositorySource = (PaxiRepositorySource) repositorySource.get();
             List<String> orderedPacks = ((PaxiRepositorySourceTricks) paxiRepositorySource).orderedPacks();
+            Map<String, String> CUSTOM_TAGS = ((PaxiRepositorySourceTricks) paxiRepositorySource).CUSTOM_TAGS();
+            List<Pack> afterUserPacks = ((PaxiRepositorySourceTricks) paxiRepositorySource).afterUserPacks();
             Map<String, Pack> availablePacks = new LinkedHashMap<>(Map.copyOf(map));
             Set<String> keysToRemove = new HashSet<>();
             for (String vanillaPackId : availablePacks.keySet()) {
                 for (String paxiPackId : orderedPacks) {
+                    if (CUSTOM_TAGS.containsValue(paxiPackId)) continue;
                     String strippedPaxiPackId = paxiPackId.replaceFirst("paxi/", "");
                     if (vanillaPackId.equals("file/" + strippedPaxiPackId) || (vanillaPackId.equals(strippedPaxiPackId) && !availablePacks.get(vanillaPackId).getPackSource().equals(PaxiPackSource.PACK_SOURCE_PAXI))) {
                         keysToRemove.add(vanillaPackId);
@@ -95,11 +99,16 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
             int orderedPacksOccusations = 0;
             for (String packName : map.keySet()) {
                 if (orderedPacks.stream().anyMatch(string -> string.equals("paxi/" + packName))) {
-                    String newPack = orderedPacks.get(orderedPacksOccusations);
-                    newMap.put(newPack, map.get(newPack));
+                    String newPackId = orderedPacks.get(orderedPacksOccusations);
+                    Pack newPack = map.get(newPackId);
+                    newMap.put(newPackId, newPack);
                     orderedPacksOccusations++;
                 } else {
-                    newMap.put(packName, map.get(packName));
+                    Pack pack = map.get(packName);
+                    if (afterUserPacks.contains(pack)) {
+                        ((PackTricks) pack).setAfterUserPack(true);
+                    }
+                    newMap.put(packName, pack);
                 }
             }
             map = newMap;
@@ -110,14 +119,22 @@ public abstract class PackRepositoryMixin implements PackRepositoryTricks {
     @Inject(method = "discoverAvailable", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/packs/repository/RepositorySource;loadPacks(Ljava/util/function/Consumer;)V", shift = At.Shift.AFTER))
     private void pullOutPacksInDiscoveringProcess(CallbackInfoReturnable<Map<String, Pack>> cir, @Local LocalRef<Map<String, Pack>> map, @Local RepositorySource repositorySource) {
         this.loadingPacksMap = map.get();
-        PaxiPlus.LOGGER.info("Loaded new packs: {}", String.join(", ", this.loadingPacksMap.keySet()));
-        if (sources.stream().toList().indexOf(repositorySource) == sources.size() - 1) {
+        if (sources.stream().toList().indexOf(repositorySource) == sources.size() - 2) {
             Optional<RepositorySource> repoSource = getPaxiRepositorySource();
             if (repoSource.isEmpty()) {
-                PaxiPlus.LOGGER.info("Repository could not be found when loading Paxi packs at last");
+                PaxiPlus.LOGGER.error("Repository could not be found when loading Paxi packs at last");
             } else {
                 PaxiRepositorySource paxiRepoSource = (PaxiRepositorySource) repoSource.get();
                 ((PaxiRepositorySourceTricks) paxiRepoSource).loadPacksTrick(pack -> map.get().put(pack.getId(), pack), (PackRepository) (Object) this);
+                map.set(map.get());
+            }
+        } else if (sources.stream().toList().indexOf(repositorySource) == sources.size() - 1) {
+            Optional<RepositorySource> repoSource = getPaxiRepositorySource();
+            if (repoSource.isEmpty()) {
+                PaxiPlus.LOGGER.error("Repository could not be found when loading after-user Paxi packs at last");
+            } else {
+                PaxiRepositorySource afterUserPaxiRepoSource = (PaxiRepositorySource) repoSource.get();
+                ((PaxiRepositorySourceTricks) afterUserPaxiRepoSource).loadAfterUserPacksTrick(pack -> map.get().put(pack.getId(), pack), ((PaxiRepositorySourceTricks) afterUserPaxiRepoSource).afterUserPacks());
                 map.set(map.get());
             }
         }

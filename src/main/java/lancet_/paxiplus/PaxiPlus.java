@@ -24,7 +24,7 @@ public class PaxiPlus implements ModInitializer {
         BASE_GAME_DIRECTORY = FabricLoader.getInstance().getGameDir().toFile();
         BASE_PACK_DIRECTORY = new File(FabricLoader.getInstance().getConfigDir().toString(), "paxi");
         LOGGER.info("Loading patches to Paxi...");
-        if (FabricLoader.getInstance().isModLoaded("paxi")){
+        if (FabricLoader.getInstance().isModLoaded("paxi")) {
             DATA_PACK_DIRECTORY = PaxiCommon.DATA_PACK_DIRECTORY == null
                     ? new File(BASE_PACK_DIRECTORY, "datapacks")
                     : PaxiCommon.DATA_PACK_DIRECTORY.toFile();
@@ -34,22 +34,21 @@ public class PaxiPlus implements ModInitializer {
                     ? new File(BASE_PACK_DIRECTORY, "datapack_load_order.json")
                     : PaxiCommon.DATAPACK_ORDERING_FILE;
             createOrderingFileIfDoesNotExist(DATAPACK_ORDERING_FILE);
-        }
-        else{
+        } else {
             LOGGER.error("What the fuck, where is Paxi? Paxi Plus asks, WHERE IS PAXI?!");
         }
     }
 
-    private void createFolderForPacksIfDoesNotExist(File folder){
+    private void createFolderForPacksIfDoesNotExist(File folder) {
         if (!folder.isDirectory()) {
-            if (!folder.mkdirs()){
+            if (!folder.mkdirs()) {
                 PaxiPlus.LOGGER.info("Couldn't create a folder for packs at {} when loading Paxi Plus", folder);
             }
         }
     }
 
-    private void createOrderingFileIfDoesNotExist(File ordering){
-        if (ordering.exists()){
+    private void createOrderingFileIfDoesNotExist(File ordering) {
+        if (ordering.exists()) {
             return;
         }
         PaxiPlusOrdering emptyPackOrdering = new PaxiPlusOrdering(new String[0]);
