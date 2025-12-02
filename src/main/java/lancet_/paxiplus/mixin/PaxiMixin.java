@@ -317,8 +317,7 @@ public abstract class PaxiMixin extends FolderRepositorySource implements PaxiRe
                 Pack pack = map.get(fileName);
                 builtinPacks.add(pack);
             } else {
-                PaxiPlus.LOGGER.error("Pack {} is not available at the time of loading Paxi, can't find in a map: {}.", fileName,
-                        String.join(", ", map.keySet()));
+                PaxiPlus.LOGGER.error("Pack {} is not available at the time of loading Paxi.", fileName);
             }
         }
         return builtinPacks;
